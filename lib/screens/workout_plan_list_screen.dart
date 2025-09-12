@@ -23,7 +23,9 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
     _loadWorkoutPlans();
   }
 
-  void _loadWorkoutPlans() {
+  Future<void> _loadWorkoutPlans() async {
+    await widget.videoService.loadWorkoutPlans();
+    if (!mounted) return;
     setState(() {
       _workoutPlans = widget.videoService.getWorkoutPlans();
     });
@@ -42,14 +44,12 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
     }
   }
 
-  void _deleteWorkoutPlan(String planId) {
-    setState(() {
-      widget.videoService.removeWorkoutPlan(planId);
-      _loadWorkoutPlans();
-    });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Workout plan deleted!')));
+  Future<void> _deleteWorkoutPlan(String planId) async {
+    await widget.videoService.removeWorkoutPlan(planId);
+    await _loadWorkoutPlans();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Workout plan deleted!')));
   }
 
   @override
@@ -60,13 +60,6 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'My Workout Plans',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(color: AppColors.text),
-            ),
-            const SizedBox(height: 16),
             Expanded(
               child: _workoutPlans.isEmpty
                   ? Center(

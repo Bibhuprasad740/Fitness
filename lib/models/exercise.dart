@@ -14,4 +14,30 @@ class Exercise {
     this.description = 'A great exercise to build strength and endurance.',
     this.equipment = const [],
   });
+
+  factory Exercise.fromJson(Map<String, dynamic> json) {
+    return Exercise(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      videoUrl: json['videoUrl'] as String? ?? '',
+      thumbnailUrl: json['thumbnailUrl'] as String? ?? '',
+      description: json['description'] as String? ??
+          'A great exercise to build strength and endurance.',
+      equipment: (json['equipment'] as List?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'videoUrl': videoUrl,
+      'thumbnailUrl': thumbnailUrl,
+      'description': description,
+      'equipment': equipment,
+    };
+  }
 }

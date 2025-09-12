@@ -64,7 +64,7 @@ class _WorkoutPlanBuilderScreenState extends State<WorkoutPlanBuilderScreen> {
     });
   }
 
-  void _saveWorkoutPlan() {
+  Future<void> _saveWorkoutPlan() async {
     if (_planNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a plan name.')),
@@ -86,14 +86,15 @@ class _WorkoutPlanBuilderScreenState extends State<WorkoutPlanBuilderScreen> {
       createdAt: DateTime.now(),
     );
 
-    widget.videoService.addWorkoutPlan(newPlan);
+    await widget.videoService.addWorkoutPlan(newPlan);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${newPlan.name} created successfully!')),
     );
     Navigator.pop(
       context,
       true,
-    ); // Pop with true to indicate success and refresh list
+    );
   }
 
   @override

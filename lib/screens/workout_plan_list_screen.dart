@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fitness/services/video_service.dart';
+import 'package:fitness/services/ai_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fitness/models/workout_plan.dart';
 import 'package:fitness/screens/workout_plan_builder_screen.dart';
 import 'package:fitness/screens/workout_plan_detail_screen.dart';
 import 'package:fitness/constants/app_theme.dart';
+import 'package:uuid/uuid.dart' show Uuid;
 
 class WorkoutPlanListScreen extends StatefulWidget {
   final VideoService videoService;
@@ -15,6 +18,8 @@ class WorkoutPlanListScreen extends StatefulWidget {
 }
 
 class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
+  final AIService _aiService = AIService();
+  final _uuid = const Uuid();
   List<WorkoutPlan> _workoutPlans = [];
 
   @override
@@ -48,8 +53,9 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
     await widget.videoService.removeWorkoutPlan(planId);
     await _loadWorkoutPlans();
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Workout plan deleted!')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Workout plan deleted!')));
   }
 
   @override
@@ -92,6 +98,12 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
                               backgroundColor: AppColors.accent,
                               foregroundColor: AppColors.text,
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: _showGeminiDialog,
+                            icon: const Icon(Icons.auto_awesome),
+                            label: const Text('Create with AI'),
                           ),
                         ],
                       ),
@@ -147,11 +159,210 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
       ),
       floatingActionButton: _workoutPlans.isNotEmpty
           ? FloatingActionButton(
-              onPressed: _navigateToWorkoutPlanBuilder,
+              onPressed: _showCreateOptions,
               backgroundColor: AppColors.accent,
               child: const Icon(Icons.add),
             )
-          : null, // Hide FAB if no plans and the "Create New Plan" button is shown
+          : null,
+    );
+  }
+
+  void _showCreateOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.build, color: AppColors.text),
+                title: const Text('Build Manually'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToWorkoutPlanBuilder();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.auto_awesome, color: AppColors.text),
+                title: const Text('Create with AI (Gemini)'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showGeminiDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showGeminiDialog() async {
+    final prefs = await SharedPreferences.getInstance();
+    String apiKey = prefs.getString('gemini_api_key') ?? '';
+    bool remember = apiKey.isNotEmpty;
+
+    final planNameController = TextEditingController(
+      text: 'AI Plan ${DateTime.now().toLocal().toString().split(' ').first}',
+    );
+    final goalController = TextEditingController(
+      text: 'Build muscle and strength',
+    );
+    final daysController = TextEditingController(text: '3');
+    final weeksController = TextEditingController(text: '6');
+    final apiKeyController = TextEditingController(text: apiKey);
+    String experience = 'Beginner';
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Create Plan with AI'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: planNameController,
+                      decoration: const InputDecoration(labelText: 'Plan Name'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: goalController,
+                      decoration: const InputDecoration(labelText: 'Goal'),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: daysController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Days/Week',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: weeksController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Duration (weeks)',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: experience,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Beginner',
+                          child: Text('Beginner'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Intermediate',
+                          child: Text('Intermediate'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Advanced',
+                          child: Text('Advanced'),
+                        ),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => experience = v ?? 'Beginner'),
+                      decoration: const InputDecoration(
+                        labelText: 'Experience Level',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: apiKeyController,
+                      onChanged: (v) => apiKey = v,
+                      decoration: const InputDecoration(
+                        labelText: 'Gemini API Key',
+                        hintText: 'Enter your Google Gemini API key',
+                      ),
+                      obscureText: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Remember API Key on this device'),
+                      value: remember,
+                      onChanged: (v) => setState(() => remember = v),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (apiKey.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter your Gemini API key.'),
+                        ),
+                      );
+                      return;
+                    }
+                    final days = int.tryParse(daysController.text.trim()) ?? 3;
+                    final weeks =
+                        int.tryParse(weeksController.text.trim()) ?? 6;
+
+                    Navigator.pop(context);
+
+                    try {
+                      final plan = await _aiService.generateWorkoutPlan(
+                        apiKey: apiKey.trim(),
+                        planName: planNameController.text.trim(),
+                        goal: goalController.text.trim(),
+                        daysPerWeek: days,
+                        durationWeeks: weeks,
+                        experienceLevel: experience,
+                      );
+                      await widget.videoService.addWorkoutPlan(plan);
+                      if (remember) {
+                        await prefs.setString('gemini_api_key', apiKey.trim());
+                      }
+                      await _loadWorkoutPlans();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${plan.name} created with AI.'),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to create plan: $e')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Generate'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -43,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         actions:
             _selectedIndex ==
-                0 // Only show search on Exercises tab
+                1 // Only show search on Exercises tab
             ? [
                 IconButton(
                   icon: Icon(Icons.search, color: AppColors.textSecondary),

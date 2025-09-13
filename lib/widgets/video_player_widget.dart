@@ -26,14 +26,13 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   Future<void> _initializePlayer() async {
     try {
-      _videoPlayerController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.videoUrl),
-      );
+      _videoPlayerController = VideoPlayerController.asset(widget.videoUrl);
       await _videoPlayerController.initialize();
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
-        autoPlay: false,
-        looping: false,
+        autoPlay: true,
+        looping: true,
+        showControls: false,
         aspectRatio: _videoPlayerController.value.aspectRatio,
         errorBuilder: (context, errorMessage) {
           return Center(

@@ -137,7 +137,7 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
                                 Icons.delete,
                                 color: AppColors.error,
                               ),
-                              onPressed: () => _deleteWorkoutPlan(plan.id),
+                              onPressed: () => _confirmDelete(plan),
                             ),
                             onTap: () {
                               Navigator.push(
@@ -217,6 +217,8 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
     final weeksController = TextEditingController(text: '6');
     final apiKeyController = TextEditingController(text: apiKey);
     String experience = 'Beginner';
+    String model = 'gemini-1.5-flash';
+    final models = <String>['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
 
     await showDialog(
       context: context,
@@ -286,6 +288,15 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: model,
+                      items: models
+                          .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                          .toList(),
+                      onChanged: (v) => setState(() => model = v ?? models.first),
+                      decoration: const InputDecoration(labelText: 'Gemini Model'),
+                    ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: apiKeyController,
                       onChanged: (v) => apiKey = v,
@@ -328,6 +339,16 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
 
                     Navigator.pop(context);
 
+                    // Show loading spinner while AI generates
+                    // ignore: use_build_context_synchronously
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => const Center(
+                        child: CircularProgressIndicator(color: AppColors.primary),
+                      ),
+                    );
+
                     try {
                       final plan = await _aiService.generateWorkoutPlan(
                         apiKey: apiKey.trim(),
@@ -336,6 +357,7 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
                         daysPerWeek: days,
                         durationWeeks: weeks,
                         experienceLevel: experience,
+                        model: model,
                       );
                       await widget.videoService.addWorkoutPlan(plan);
                       if (remember) {
@@ -343,6 +365,7 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
                       }
                       await _loadWorkoutPlans();
                       if (!mounted) return;
+                      Navigator.pop(context); // close spinner
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('${plan.name} created with AI.'),
@@ -350,6 +373,7 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
                       );
                     } catch (e) {
                       if (!mounted) return;
+                      Navigator.pop(context); // close spinner
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Failed to create plan: $e')),
                       );
@@ -364,5 +388,31 @@ class _WorkoutPlanListScreenState extends State<WorkoutPlanListScreen> {
         );
       },
     );
+  }
+
+  Future<void> _confirmDelete(WorkoutPlan plan) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Delete Plan'),
+          content: Text('Are you sure you want to delete "${plan.name}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed == true) {
+      await _deleteWorkoutPlan(plan.id);
+    }
   }
 }

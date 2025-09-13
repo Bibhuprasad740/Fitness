@@ -8,8 +8,8 @@ import 'package:fitness/services/ai_http_client_io.dart'
 
 class AIService {
   final _uuid = const Uuid();
-  static const String _geminiEndpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+  static const String _geminiBase =
+      'https://generativelanguage.googleapis.com/v1beta/models';
 
   Future<WorkoutPlan> generateWorkoutPlan({
     required String apiKey,
@@ -18,6 +18,7 @@ class AIService {
     required int daysPerWeek,
     required int durationWeeks,
     required String experienceLevel,
+    String model = 'gemini-1.5-flash',
   }) async {
     final prompt = _buildPrompt(
       planName: planName,
@@ -27,7 +28,7 @@ class AIService {
       experienceLevel: experienceLevel,
     );
 
-    final url = '$_geminiEndpoint?key=$apiKey';
+    final url = '$_geminiBase/$model:generateContent?key=$apiKey';
     final body = {
       'contents': [
         {
